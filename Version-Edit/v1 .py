@@ -132,7 +132,7 @@ time.sleep(1.0)
 
 # GUI Setup
 root = tk.Tk()
-root.title("Driver Drowsiness Detection")
+root.title("ระบบ AI ช่วยตรวจจับความเหนื่อยล้าสำหรับคนขับรถ (Driver Fatigue Detector)")
 root.configure(bg="black")
 
 video_label = Label(root, bg="black")
