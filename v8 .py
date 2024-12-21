@@ -14,6 +14,7 @@ from tkinter import Label, messagebox  # ใช้สำหรับ pop-up aler
 from tkinter import ttk  # ใช้สำหรับ progress bar
 from PIL import Image, ImageTk
 
+
 # ฟังก์ชันสำหรับเล่นเสียง
 def sound_alarm(path):
     global alarm_status
@@ -57,7 +58,7 @@ def lip_distance(shape):
     distance = abs(top_mean[1] - low_mean[1])
     return distance
 
-# ฟังก์ชันอัปเดตเฟรมจากกล้อง
+# ฟังก์ชันอัปเดตเฟรมจากกล้อง ที่เลือกไว้ใน GUI
 def update_frame():
     global COUNTER, alarm_status, alarm_status2, saying, eye_blink_count, yawn_count, eyes_closed, mouth_open, alert_triggered, closed_eye_time, progress_full_count
 
@@ -183,14 +184,19 @@ menu = tk.Menu(root)
 root.config(menu=menu)
 settings_menu = tk.Menu(menu)
 menu.add_cascade(label="Settings", menu=settings_menu)
-# เพิ่มเมนูเลือกกล้อง (Camera)
-def change_camera():
+# เพิ่มเมนูเลือกแหล่งภาพจากกล้องที่ต้องการ
+def change_camera_source(source):
     global vs
     vs.stop()
-    vs = VideoStream(src=1).start()
+    vs = VideoStream(src=source).start()
     time.sleep(1.0)
-settings_menu.add_command(label="Change Camera", command=change_camera)
-
+    print(f"Changed camera source to {source}")
+    messagebox.showinfo("Camera Source", f"Changed camera source to {source}")
+# เพิ่มเมนูเลือกกล้อง
+camera_menu = tk.Menu(settings_menu)
+settings_menu.add_cascade(label="Change Camera Source", menu=camera_menu)
+camera_menu.add_command(label="Internal Camera", command=lambda: change_camera_source(0))
+camera_menu.add_command(label="External Camera", command=lambda: change_camera_source(1))
 
 
 # Vintage mode colors
@@ -200,8 +206,6 @@ btn_color = "#3c3c3c"  # Dark gray buttons
 font_style = ("Courier", 16, "bold")
 
 root.configure(bg=bg_color)
-
-
 video_label = Label(root, bg=bg_color)
 video_label.pack()
 
