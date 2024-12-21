@@ -196,7 +196,7 @@ def change_camera_source(source):
 camera_menu = tk.Menu(settings_menu)
 settings_menu.add_cascade(label="Change Camera Source", menu=camera_menu)
 camera_menu.add_command(label="Internal Camera", command=lambda: change_camera_source(0))
-camera_menu.add_command(label="External Camera", command=lambda: change_camera_source(1))
+camera_menu.add_command(label="External Camera", command=lambda: change_camera_source(2))
 
 
 # Vintage mode colors
