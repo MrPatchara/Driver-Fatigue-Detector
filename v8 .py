@@ -135,7 +135,7 @@ def update_frame():
                 status_color = "red"
                 progress_full_count += 1  # เพิ่มจำนวนครั้งที่ progress bar เต็ม
                 progress_bar["value"] = 0  # รีเซ็ต progress bar
-                progress_count_label.config(text=f"Progress Full Count: {progress_full_count}")  # อัปเดต GUI
+                progress_count_label.config(text=f"Doze Off Count: {progress_full_count}")  # อัปเดต GUI
 
     status_label.config(text=status_message, fg=status_color)
 
@@ -255,7 +255,7 @@ def reset_values():
     progress_full_count = 0
     blink_count_label.config(text=f"Close Eye Count: {eye_blink_count}")  # รีเซ็ตจำนวนการกะพริบตา
     yawn_count_label.config(text=f"Yawn Count: {yawn_count}")  # รีเซ็ตจำนวนการหาว
-    progress_count_label.config(text=f"Progress Full Count: {progress_full_count}")  # รีเซ็ตจำนวนครั้งที่ progress bar เต็ม
+    progress_count_label.config(text=f"Doze Off Count: {progress_full_count}")  # รีเซ็ตจำนวนครั้งที่ progress bar เต็ม
     progress_bar["value"] = 0  # รีเซ็ต progress bar
     status_label.config(text="Status: Monitoring", fg="white")  # รีเซ็ตสถานะ
 reset_button = tk.Button(root, text="Reset", font=(font_style), command=reset_values, bg="dark blue", fg=fg_color)
