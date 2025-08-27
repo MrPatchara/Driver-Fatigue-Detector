@@ -1,0 +1,11 @@
+Pillow
+firebase-admin
+opencv-python
+imutils
+numpy
+mediapipe
+scipy
+dlib
+requests
+pyrebase
+playsound
