@@ -27,6 +27,16 @@ vs = None
 detection_enabled = False
 camera_available = False
 yawn_start_time = None
+current_blink_count = None
+
+
+#-- Global variable เพิ่ม
+blink_times = []   # เก็บเวลาที่กระพริบ
+BLINK_RATE_THRESH = 30   # กระพริบเกิน 30 ครั้ง/นาที
+BLINK_RATE_WINDOW = 60    # หน่วงเวลา 60 วินาที
+tendency_status_active = False
+tendency_status_time = 0
+TENDENCY_DISPLAY_TIME = 5  # วินาทีที่แสดงสถานะก่อนกลับ normal
 
 #-- Detection parameters
 EYE_AR_THRESH = 0.25
@@ -98,6 +108,8 @@ def update_frame():
     global eyes_closed, mouth_open, alert_triggered, closed_eye_time, progress_full_count
     global last_backend_send_time, current_detection_data
     global yawn_start_time
+    global blink_times, tendency_status_active, tendency_status_time
+    
 
     if not detection_enabled or not camera_available or not vs:
         video_label.after(100, update_frame)
@@ -129,53 +141,104 @@ def update_frame():
             draw_landmark_box(display_frame, landmarks, [263, 387, 385, 362, 380, 373], (0, 255, 0))  # ขวา
             draw_landmark_box(display_frame, landmarks, [13, 14, 17, 18], (0, 165, 255))              # ปาก
 
-            if current_ear < EYE_AR_THRESH:
-                COUNTER += 1
-                if COUNTER >= EYE_AR_CONSEC_FRAMES:
+        current_time = time.time()
+
+        # ---------------- DROWSINESS DETECTION ----------------
+        if current_ear < EYE_AR_THRESH:
+            COUNTER += 1
+            if COUNTER >= EYE_AR_CONSEC_FRAMES:
+                closed_eye_time += 1
+                if closed_eye_time >= 50:
+                    # CRITICAL
+                    alert_triggered = True
+                    status_message = "CRITICAL: EXTENDED DROWSINESS"
+                    status_color = "#D32F2F"
                     if not alarm_status:
                         alarm_status = True
                         eye_blink_count += 1
                         if os.path.exists(alarm_path):
                             start_alarm_thread(alarm_path, alarm_flag=lambda: alarm_status)
+                else:
+                    # DROWSINESS DETECTED
                     status_message = "DROWSINESS DETECTED"
                     status_color = "#F44336"
-                    closed_eye_time += 1
-                    if closed_eye_time >= 50:
-                        alert_triggered = True
-                        status_message = "CRITICAL: EXTENDED DROWSINESS"
-                        status_color = "#D32F2F"
-            else:
-                COUNTER = 0
-                alarm_status = False
-                closed_eye_time = 0
-                alert_triggered = False
-
-            if current_mouth_distance > 0.5:  # MAR Threshold
-                if yawn_start_time is None:
-                    yawn_start_time = time.time()
-                elif time.time() - yawn_start_time > 1.5:
-                    if not mouth_open:
-                        yawn_count += 1
-                        mouth_open = True
-                        if os.path.exists(alarm_path) and not alarm_status2 and not saying:
-                            alarm_status2 = True
-                            start_alarm_thread(
-                                alarm_path,
-                                once=True,
-                                state_flag_setter=lambda: set_saying(True),
-                                state_flag_clearer=lambda: clear_saying()
-                            )
-                    if status_message == "NORMAL":
-                        status_message = "YAWN DETECTED"
-                        status_color = "#FF9800"
-            else:
-                mouth_open = False
-                alarm_status2 = False
-                yawn_start_time = None
-
+                    if not alarm_status:
+                        alarm_status = True
+                        eye_blink_count += 1
+                        if os.path.exists(alarm_path):
+                            start_alarm_thread(alarm_path, alarm_flag=lambda: alarm_status)
         else:
+            COUNTER = 0
+            alarm_status = False
+            closed_eye_time = 0
+            alert_triggered = False
+
+        # ---------------- BLINK RATE DETECTION ----------------
+        if current_ear < EYE_AR_THRESH:
+            if not eyes_closed:
+                eyes_closed = True
+                blink_times.append(current_time)
+        else:
+            eyes_closed = False
+
+        # ลบเวลากระพริบเก่า (ย้อนหลัง 60 วินาที)
+        blink_times = [t for t in blink_times if current_time - t <= BLINK_RATE_WINDOW]
+
+        # นับจำนวน blink ปัจจุบัน
+        current_blink_count_val = len(blink_times)
+
+        # อัพเดต GUI metric
+        # สมมติว่าใน main_gui.py create_metric เก็บ label ของ current_blink_count ไว้
+        if current_blink_count is not None:
+            current_blink_count.config(text=f"{current_blink_count_val}/{BLINK_RATE_THRESH}")
+
+        # ตรวจจับ HIGH BLINK RATE
+        if current_blink_count_val >= BLINK_RATE_THRESH and closed_eye_time < EYE_AR_CONSEC_FRAMES:
+            tendency_status_active = True
+            tendency_status_time = current_time
+            status_message = "HIGH BLINK RATE"
+            status_color = "#FFA500"  # สีส้ม
+            blink_times = []  # รีเซ็ตหลัง 5 วินาที
+
+        # รีเซ็ตกลับ NORMAL หลังครบ 5 วินาที
+        if tendency_status_active and current_time - tendency_status_time > 5:
+            tendency_status_active = False
+            status_message = "NORMAL"
+            status_color = "#00FF00"  # สีเขียว
+            blink_times = []
+            if current_blink_count is not None:
+                current_blink_count.config(text=f"0/{BLINK_RATE_THRESH}")
+
+        # ---------------- YAWN DETECTION ----------------
+        if current_mouth_distance > 0.5:
+            if yawn_start_time is None:
+                yawn_start_time = current_time
+            elif current_time - yawn_start_time > 1.5:
+                if not mouth_open:
+                    yawn_count += 1
+                    mouth_open = True
+                    if os.path.exists(alarm_path) and not alarm_status2 and not saying:
+                        alarm_status2 = True
+                        start_alarm_thread(
+                            alarm_path,
+                            once=True,
+                            state_flag_setter=lambda: set_saying(True),
+                            state_flag_clearer=lambda: clear_saying()
+                        )
+                # YAWN DETECTED แสดงเฉพาะเมื่อสถานะ NORMAL
+                if status_message == "NORMAL":
+                    status_message = "YAWN DETECTED"
+                    status_color = "#FF9800"
+        else:
+            mouth_open = False
+            alarm_status2 = False
+            yawn_start_time = None
+
+        # ---------------- NO FACE DETECTED ----------------
+        if not results.multi_face_landmarks:
             status_message = "NO FACE DETECTED"
             status_color = "#FF9800"
+
 
         if alert_triggered:
             progress_bar["value"] += 3
@@ -224,6 +287,7 @@ def update_frame():
     except Exception as e:
         print(f"[Frame Update] Error: {e}")
         video_label.after(100, update_frame)
+
 
 #-- Functions to control the GUI state and actions
 def set_saying(val):

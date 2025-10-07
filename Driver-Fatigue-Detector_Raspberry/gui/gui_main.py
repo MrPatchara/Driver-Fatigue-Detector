@@ -41,6 +41,7 @@ yawn_count_value_label = None
 doze_value_label = None
 ear_value_label = None
 yawn_value_label = None
+current_blink_count = None
 
 #-- Import necessary modules for video processing
 from imutils.video import VideoStream
@@ -145,6 +146,8 @@ def start_gui():
     create_metric("EAR:", "ear_value_label", "0.000", primary_color)
     create_metric("Mouth:", "yawn_value_label", "0.0", primary_color)
     create_metric("Events:", "blink_value_label", "0", warning_color)
+    create_metric("Blink:", "current_blink_value_label", "0/30", warning_color)
+
 
     yawn_count_value_label = Label(metrics_grid, text="0", font=("Segoe UI", 10, "bold"), fg=warning_color, bg=card_bg)
     doze_value_label = Label(metrics_grid, text="0", font=("Segoe UI", 10, "bold"), fg=danger_color, bg=card_bg)
@@ -189,5 +192,7 @@ def start_gui():
         "predictor": predictor,
         "camera_available": camera_available,
     })
+
+
 
     root.mainloop()
